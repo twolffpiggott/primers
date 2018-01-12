@@ -437,3 +437,86 @@ You can install NGINX and see the traffic flow to the VM. Install NGINX as follo
 sudo apt-get install -y nginx
 ```
 To see the default NGINX site in action, open your web browser and enter your FQDN.
+
+# Install SQL Server and create a database in Ubuntu
+**requires a VM with at lease 2 GB of memory**
+
+## Install SQL Server
+To configure SQL Server on Ubuntu, run the following commands in a terminal to install the mssql-server package.
+
+1. Import the public repository GPG keys:
+```shell
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+```
+2. Register the Microsoft SQL Server Ubuntu repository:
+```shell
+sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/16.04/mssql-server-2017.list)"
+```
+3. Run the following commands to install SQL Server:
+```shell
+sudo apt-get update
+sudo apt-get install -y mssql-server
+```
+4. After the package installation finishes, run mssql-conf setup and follow the prompts to set the SA password and choose your edition.
+```shell
+sudo /opt/mssql/bin/mssql-conf setup
+```
+5. Once the configuration is done, verify that the service is running:
+```shell
+systemctl status mssql-server
+```
+6. If you plan to connect remotely, you might also need to open the SQL Server TCP port (default 1433) on your firewall.
+
+## Install the SQL Server command-line tools
+To create a database, you need to connect with a tool that can run Transact-SQL statements on the SQL Server. The following steps install the SQL Server command-line tools: sqlcmd and bcp.
+1. Import the public repository GPG keys:
+```shell
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+```
+2. Register the Microsoft Ubuntu repository:
+```shell
+sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/16.04/prod.list)"
+```
+3. Update the sources list and run the installation command with the unixODBC developer package:
+```shell
+sudo apt-get update
+sudo apt-get install -y mssql-tools unixodbc-dev
+```
+4. For convenience, add `/opt/mssql-tools/bin/` to your **PATH** environment variable. This enables you to run the tools without specifying the full path. Run the following commands to modify your **PATH** for both login sessions and interactive/non-login sessions:
+```shell
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+## Connect locally
+The following steps use **sqlcmd** to locally connect to your new SQL Server instance.
+1. Run *sqlcmd* with parameters for your SQL Server name (-S), the user name (-U), and the password (-P). In this tutorial, you are connecting locally, so the server name is `localhost`. The user name is `SA` and the password is the one you provided for the SA account during setup.
+```shell
+sqlcmd -S localhost -U SA -P '<YourPassword>'
+```
+2. If successful, you should get to a **sqlcmd** command prompt: `1>`
+
+## Working with SQL Server
+1. Create a new database:
+```sql
+CREATE DATABASE TestDB
+SELECT Name from sys.Databases
+GO
+```
+2. Create and insert into table:
+```sql
+USE TestDB
+CREATE TABLE Inventory (id INT, name NVARCHAR(50), quantity INT)
+INSERT INTO Inventory VALUES (1, 'banana', 150); INSERT INTO Inventory VALUES (2, 'orange', 154);
+GO
+```
+3. Select data:
+```sql
+SELECT * FROM Inventory WHERE quantity > 152;
+GO
+```
+4. Quit:
+```sql
+QUIT
+```
