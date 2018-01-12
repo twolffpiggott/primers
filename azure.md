@@ -105,3 +105,335 @@ By default, the output of Azure CLI commands is in JSON (JavaScript Object Notat
   "tags": null
 }
 ```
+
+## Create a virtual network and subnet
+Next you create a virtual network in Azure and a subnet in to which you can create your VMs. Use `az network vnet` create to create a virtual network named *myVnet* with the 192.168.0.0/16 address prefix. You also add a subnet named *mySubnet* with the address prefix of 192.168.1.0/24:
+```shell
+az network vnet create \
+    --resource-group myResourceGroup \
+    --name myVnet \
+    --address-prefix 192.168.0.0/16 \
+    --subnet-name mySubnet \
+    --subnet-prefix 192.168.1.0/24
+```
+The output shows the subnet is logically created inside the virtual network:
+```json
+{
+  "addressSpace": {
+    "addressPrefixes": [
+      "192.168.0.0/16"
+    ]
+  },
+  "dhcpOptions": {
+    "dnsServers": []
+  },
+  "etag": "W/\"e95496fc-f417-426e-a4d8-c9e4d27fc2ee\"",
+  "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/virtualNetworks/myVnet",
+  "location": "eastus",
+  "name": "myVnet",
+  "provisioningState": "Succeeded",
+  "resourceGroup": "myResourceGroup",
+  "resourceGuid": "ed62fd03-e9de-430b-84df-8a3b87cacdbb",
+  "subnets": [
+    {
+      "addressPrefix": "192.168.1.0/24",
+      "etag": "W/\"e95496fc-f417-426e-a4d8-c9e4d27fc2ee\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/virtualNetworks/myVnet/subnets/mySubnet",
+      "ipConfigurations": null,
+      "name": "mySubnet",
+      "networkSecurityGroup": null,
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "resourceNavigationLinks": null,
+      "routeTable": null
+    }
+  ],
+  "tags": {},
+  "type": "Microsoft.Network/virtualNetworks",
+  "virtualNetworkPeerings": null
+}
+```
+
+## Create a public IP address
+Now let's create a public IP address with `az network public-ip create`. This public IP address enables you to connect to your VMs from the Internet. Because the default address is dynamic, create a named DNS entry with the `--domain-name-label` parameter. The following example creates a public IP named *myPublicIP* with the DNS name of *mypublicdns*. Because the DNS name must be unique, provide your own unique DNS name:
+```shell
+az network public-ip create \
+    --resource-group myResourceGroup \
+    --name myPublicIP \
+    --dns-name mypublicdns
+```
+Output:
+```json
+{
+  "publicIp": {
+    "dnsSettings": {
+      "domainNameLabel": "mypublicdns",
+      "fqdn": "mypublicdns.eastus.cloudapp.azure.com",
+      "reverseFqdn": null
+    },
+    "etag": "W/\"2632aa72-3d2d-4529-b38e-b622b4202925\"",
+    "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/publicIPAddresses/myPublicIP",
+    "idleTimeoutInMinutes": 4,
+    "ipAddress": null,
+    "ipConfiguration": null,
+    "location": "eastus",
+    "name": "myPublicIP",
+    "provisioningState": "Succeeded",
+    "publicIpAddressVersion": "IPv4",
+    "publicIpAllocationMethod": "Dynamic",
+    "resourceGroup": "myResourceGroup",
+    "resourceGuid": "4c65de38-71f5-4684-be10-75e605b3e41f",
+    "tags": null,
+    "type": "Microsoft.Network/publicIPAddresses"
+  }
+}
+```
+
+## Create a network security group
+To control the flow of traffic in and out of your VMs, you apply a network security group to a virtual NIC or subnet. The following example uses `az network nsg create` to create a network security group named *myNetworkSecurityGroup*:
+```shell
+az network nsg create \
+    --resource-group myResourceGroup \
+    --name myNetworkSecurityGroup
+```
+You define rules that allow or deny specific traffic. To allow inbound connections on port 22 (to enable SSH access), create an inbound rule with `az network nsg rule create`. The following example creates a rule named *myNetworkSecurityGroupRuleSSH*:
+```shell
+az network nsg rule create \
+    --resource-group myResourceGroup \
+    --nsg-name myNetworkSecurityGroup \
+    --name myNetworkSecurityGroupRuleSSH \
+    --protocol tcp \
+    --priority 1000 \
+    --destination-port-range 22 \
+    --access allow
+```
+To allow inbound connections on port 80 (for web traffic), add another network security group rule. The following example creates a rule named *myNetworkSecurityGroupRuleHTTP*:
+```shell
+az network nsg rule create \
+    --resource-group myResourceGroup \
+    --nsg-name myNetworkSecurityGroup \
+    --name myNetworkSecurityGroupRuleWeb \
+    --protocol tcp \
+    --priority 1001 \
+    --destination-port-range 80 \
+    --access allow
+```
+Examine the network security group and rules with `az network nsg show`:
+Output:
+```json
+{
+  "defaultSecurityRules": [
+    {
+      "access": "Allow",
+      "description": "Allow inbound traffic from all VMs in VNET",
+      "destinationAddressPrefix": "VirtualNetwork",
+      "destinationPortRange": "*",
+      "direction": "Inbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/AllowVnetInBound",
+      "name": "AllowVnetInBound",
+      "priority": 65000,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "VirtualNetwork",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Allow",
+      "description": "Allow inbound traffic from azure load balancer",
+      "destinationAddressPrefix": "*",
+      "destinationPortRange": "*",
+      "direction": "Inbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/AllowAzureLoadBalancerInBou
+      "name": "AllowAzureLoadBalancerInBound",
+      "priority": 65001,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "AzureLoadBalancer",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Deny",
+      "description": "Deny all inbound traffic",
+      "destinationAddressPrefix": "*",
+      "destinationPortRange": "*",
+      "direction": "Inbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/DenyAllInBound",
+      "name": "DenyAllInBound",
+      "priority": 65500,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "*",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Allow",
+      "description": "Allow outbound traffic from all VMs to all VMs in VNET",
+      "destinationAddressPrefix": "VirtualNetwork",
+      "destinationPortRange": "*",
+      "direction": "Outbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/AllowVnetOutBound",
+      "name": "AllowVnetOutBound",
+      "priority": 65000,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "VirtualNetwork",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Allow",
+      "description": "Allow outbound traffic from all VMs to Internet",
+      "destinationAddressPrefix": "Internet",
+      "destinationPortRange": "*",
+      "direction": "Outbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/AllowInternetOutBound",
+      "name": "AllowInternetOutBound",
+      "priority": 65001,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "*",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Deny",
+      "description": "Deny all outbound traffic",
+      "destinationAddressPrefix": "*",
+      "destinationPortRange": "*",
+      "direction": "Outbound",
+      "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/defaultSecurityRules/DenyAllOutBound",
+      "name": "DenyAllOutBound",
+      "priority": 65500,
+      "protocol": "*",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "*",
+      "sourcePortRange": "*"
+    }
+  ],
+  "etag": "W/\"3371b313-ea9f-4687-a336-a8ebdfd80523\"",
+  "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup",
+  "location": "eastus",
+  "name": "myNetworkSecurityGroup",
+  "networkInterfaces": null,
+  "provisioningState": "Succeeded",
+  "resourceGroup": "myResourceGroup",
+  "resourceGuid": "47a9964e-23a3-438a-a726-8d60ebbb1c3c",
+  "securityRules": [
+    {
+      "access": "Allow",
+      "description": null,
+      "destinationAddressPrefix": "*",
+      "destinationPortRange": "22",
+      "direction": "Inbound",
+      "etag": "W/\"9e344b60-0daa-40a6-84f9-0ebbe4a4b640\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/securityRules/myNetworkSecurityGroupRuleSSH",
+      "name": "myNetworkSecurityGroupRuleSSH",
+      "priority": 1000,
+      "protocol": "Tcp",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "*",
+      "sourcePortRange": "*"
+    },
+    {
+      "access": "Allow",
+      "description": null,
+      "destinationAddressPrefix": "*",
+      "destinationPortRange": "80",
+      "direction": "Inbound",
+      "etag": "W/\"9e344b60-0daa-40a6-84f9-0ebbe4a4b640\"",
+      "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkSecurityGroups/myNetworkSecurityGroup/securityRules/myNetworkSecurityGroupRuleWeb",
+      "name": "myNetworkSecurityGroupRuleWeb",
+      "priority": 1001,
+      "protocol": "Tcp",
+      "provisioningState": "Succeeded",
+      "resourceGroup": "myResourceGroup",
+      "sourceAddressPrefix": "*",
+      "sourcePortRange": "*"
+    }
+  ],
+  "subnets": null,
+  "tags": null,
+  "type": "Microsoft.Network/networkSecurityGroups"
+}
+```
+
+## Create a VM
+You've created the network resources to support Internet-accessible VMs. Now create a VM and secure it with an SSH key. In this example, let's create an Ubuntu VM based on the most recent LTS. You can find additional images with `az vm image list`.
+
+Specify an SSH key to use for authentication. If you do not have an SSH public key pair, you can create them or use the `--generate-ssh-keys` parameter to create them for you. If you already have a key pair, this parameter uses existing keys in `~/.ssh`.
+
+Create the VM by bringing all the resources and information together with the `az vm create` command. The following example creates a VM named *myVM*:
+```shell
+az vm create \
+    --resource-group myResourceGroup \
+    --name myVM \
+    --location eastus \
+    --availability-set myAvailabilitySet \
+    --nics myNic \
+    --image UbuntuLTS \
+    --admin-username azureuser \
+    --generate-ssh-keys
+```
+SSH to your VM with the DNS entry you provided when you created the public IP address. This `fqdn` is shown in the output as you create your VM:
+```json
+{
+  "fqdns": "mypublicdns.eastus.cloudapp.azure.com",
+  "id": "/subscriptions/guid/resourceGroups/myResourceGroup/providers/Microsoft.Compute/virtualMachines/myVM",
+  "location": "eastus",
+  "macAddress": "00-0D-3A-13-71-C8",
+  "powerState": "VM running",
+  "privateIpAddress": "192.168.1.5",
+  "publicIpAddress": "13.90.94.252",
+  "resourceGroup": "myResourceGroup"
+}
+```
+```shell
+ssh azureuser@mypublicdns.eastus.cloudapp.azure.com
+```
+Output:
+```shell
+The authenticity of host 'mypublicdns.eastus.cloudapp.azure.com (13.90.94.252)' can't be established.
+ECDSA key fingerprint is SHA256:SylINP80Um6XRTvWiFaNz+H+1jcrKB1IiNgCDDJRj6A.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added 'mypublicdns.eastus.cloudapp.azure.com,13.90.94.252' (ECDSA) to the list of known hosts.
+Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.11.0-1016-azure x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  Get cloud support with Ubuntu Advantage Cloud Guest:
+    http://www.ubuntu.com/business/services/cloud
+
+0 packages can be updated.
+0 updates are security updates.
+
+
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+To run a command as administrator (user "root"), use "sudo <command>".
+See "man sudo_root" for details.
+
+azureuser@myVM:~$
+```
+You can install NGINX and see the traffic flow to the VM. Install NGINX as follows:
+```shell
+sudo apt-get install -y nginx
+```
+To see the default NGINX site in action, open your web browser and enter your FQDN.
