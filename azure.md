@@ -44,7 +44,7 @@ Create a resource group named "MyResourceGroup" in the westus2 region of Azure.
 az group create -n MyResourceGroup -l westus2
 ```
 The command outputs several properties of the newly created resource
-```
+```json
 {
   "id": "/subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/MyResourceGroup",
   "location": "westus2",
@@ -67,7 +67,7 @@ When you run the preceding command, the Azure CLI 2.0 looks for an SSH key pair 
 az vm create -n MyLinuxVM -g MyResourceGroup --image UbuntuLTS --data-disk-sizes-gb 10 20 --generate-ssh-keys
 ```
 The `az vm create` command returns output once the VM has been fully created and is ready to be accessed and used. The output includes several properties of the newly created VM including its public IP address:
-```
+```json
 {
   "fqdns": "",
   "id": "/subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/MyResourceGroup/providers/Microsoft.Compute/virtualMachines/MyLinuxVM",
@@ -86,4 +86,22 @@ Now that the VM has been created, you can log on to your new Linux VM using **SS
 ssh xx.xxx.xxx.xxx
 ```
 
+# Create a complete Linux virtual machine 
 
+## Create resource group
+An Azure resource group is a logical container into which Azure resources are deployed and managed. A resource group must be created before a virtual machine and supporting virtual network resources. Create the resource group with az group create. The following example creates a resource group named myResourceGroup in the eastus location:
+```shell
+az group create --name myResourceGroup --location eastus
+```
+By default, the output of Azure CLI commands is in JSON (JavaScript Object Notation). To change the default output to a list or table, for example, use az configure --output. You can also add `--output` to any command for a one time change in output format. The following example shows the JSON output from the `az group create` command:
+```json
+{
+  "id": "/subscriptions/guid/resourceGroups/myResourceGroup",
+  "location": "eastus",
+  "name": "myResourceGroup",
+  "properties": {
+    "provisioningState": "Succeeded"
+  },
+  "tags": null
+}
+```
