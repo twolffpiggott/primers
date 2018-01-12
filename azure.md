@@ -1,3 +1,27 @@
+# Infrastructure Design
+
+## Net
+* virtual network
+* subnets
+  * mgmt
+  * production
+* dns zone
+* security groups
+  * http
+  * https
+  * ssh
+
+## Compute
+* virtual_machine
+* disks
+* network adapter
+* dns record
+* cloud init script (os_profile.custom_data)
+  * hostname
+  * salt bootstrap
+* ssh keys
+* public IP
+
 # Working with Azure CLI 2.0
 
 ## Install Azure CLI 2.0 on Ubuntu:
